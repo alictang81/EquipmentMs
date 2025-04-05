@@ -1,0 +1,22 @@
+---
+- hosts: prod
+  become: yes
+  vars:
+    app_dir: /opt/equipmentms
+  tasks:
+    - name: 同步代码
+      ansible.builtin.git:
+        repo: '{{ repo_url }}'
+        dest: '{{ app_dir }}'
+        version: main
+
+    - name: 构建Docker容器
+      community.docker.docker_compose:
+        project_src: '{{ app_dir }}/deploy'
+        env_file: .env.prod
+
+    - name: 执行数据库迁移
+      command: docker exec equipmentms_web_1 python manage.py migrate
+
+    - name: 收集静态文件
+      command: docker exec equipmentms_web_1 python manage.py collectstatic --noinput
